@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mossy Pomodoro — Focus Timer</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Caveat:wght@400;600&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg-forest-light:linear-gradient(180deg,#d4c9a8 0%,#b8a882 15%,#8fa876 35%,#5a7a45 55%,#3d5c2a 75%,#2a3d1a 100%);
+  --bg-forest-dark:linear-gradient(180deg,#0d1a0a 0%,#111f0c 20%,#162810 40%,#1a3012 60%,#0f1f0a 80%,#080f05 100%);
+  --overlay-light:rgba(245,238,218,0.18);
+  --overlay-dark:rgba(8,15,5,0.55);
+  --text-light:#fdf9f0;
+  --text-dark:#e8dfc8;
+  --text-muted-light:rgba(253,249,240,0.75);
+  --text-muted-dark:rgba(232,223,200,0.6);
+  --card-light:rgba(253,249,240,0.18);
+  --card-dark:rgba(20,35,12,0.65);
+  --card-border-light:rgba(253,249,240,0.3);
+  --card-border-dark:rgba(90,120,60,0.3);
+  --pill-light:rgba(253,249,240,0.92);
+  --pill-dark:rgba(25,45,15,0.88);
+  --pill-active-light:#4a7c59;
+  --pill-active-dark:#3d6648;
+  --pill-text-light:#3d2e1e;
+  --pill-text-dark:#c8dfa8;
+  --btn-start-light:rgba(253,249,240,0.95);
+  --btn-start-dark:rgba(40,70,25,0.9);
+  --btn-start-text-light:#3d2e1e;
+  --btn-start-text-dark:#d4f0a8;
+  --moss:#4a7c59;
+  --leaf:#7ab85a;
+  --bark:#6b4c2a;
+  --amber:#c8960a;
+  --rose:#c4856a;
+  --cream:#fdf9f0;
+  --sage:#8fb87a;
+}
+
+body{
+  font-family:'Lato',sans-serif;
+  min-height:100vh;
+  overflow:hidden;
+  position:relative;
+  cursor:default;
+  transition:all 0.8s ease;
+}
+
+/* Background canvas */
+.bg-canvas{
+  position:fixed;inset:0;z-index:0;
+  background:var(--bg-forest-light);
+  transition:background 0.8s ease;
+}
+.dark .bg-canvas{background:var(--bg-forest-dark);}
+
+/* SVG forest scene */
+.forest-scene{
+  position:fixed;inset:0;z-index:1;
+  width:100%;height:100%;
+  transition:opacity 0.8s;
+}
+
+/* Overlay */
+.overlay{
+  position:fixed;inset:0;z-index:2;
+  background:var(--overlay-light);
+  transition:background 0.8s;
+}
+.dark .overlay{background:var(--overlay-dark);}
+
+/* Main layout */
+.app{
+  position:fixed;inset:0;z-index:10;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:0;
+}
+
+/* Logo top-left */
+.logo{
+  position:fixed;top:1.5rem;left:2rem;
+  font-family:'Caveat',cursive;
+  font-size:1.6rem;font-weight:600;
+  color:var(--text-light);
+  text-shadow:0 2px 12px rgba(0,0,0,0.35);
+  letter-spacing:0.01em;
+  z-index:20;
+  transition:color 0.5s;
+}
+.dark .logo{color:var(--text-dark);}
+.logo span{
+  display:block;font-size:0.65rem;
+  font-family:'Lato',sans-serif;
+  font-weight:300;letter-spacing:0.2em;
+  text-transform:uppercase;opacity:0.75;margin-top:-2px;
+}
+
+/* Top-right controls */
+.top-right{
+  position:fixed;top:1.5rem;right:2rem;
+  display:flex;align-items:center;gap:0.75rem;z-index:20;
+}
+.icon-btn{
+  background:rgba(253,249,240,0.15);
+  border:1px solid rgba(253,249,240,0.25);
+  border-radius:50%;width:38px;height:38px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:1rem;
+  color:var(--text-light);
+  backdrop-filter:blur(8px);
+  transition:all 0.25s;
+}
+.dark .icon-btn{
+  background:rgba(20,40,10,0.4);
+  border-color:rgba(100,160,60,0.25);
+  color:var(--text-dark);
+}
+.icon-btn:hover{transform:scale(1.08);background:rgba(253,249,240,0.25);}
+.dark .icon-btn:hover{background:rgba(40,80,20,0.5);}
+.sessions-badge{
+  background:rgba(253,249,240,0.15);
+  border:1px solid rgba(253,249,240,0.25);
+  border-radius:20px;padding:0.3rem 0.9rem;
+  font-size:0.75rem;color:var(--text-light);
+  backdrop-filter:blur(8px);letter-spacing:0.05em;
+  transition:all 0.5s;
+}
+.dark .sessions-badge{
+  background:rgba(20,40,10,0.4);
+  border-color:rgba(100,160,60,0.25);
+  color:var(--text-dark);
+}
+
+/* Mode tabs */
+.mode-tabs{
+  display:flex;gap:0.5rem;margin-bottom:2.5rem;
+  backdrop-filter:blur(0px);
+}
+.mode-tab{
+  font-family:'Lato',sans-serif;
+  font-size:0.88rem;font-weight:400;
+  padding:0.5rem 1.4rem;
+  border-radius:30px;
+  border:2px solid rgba(253,249,240,0.55);
+  background:rgba(253,249,240,0.12);
+  color:var(--text-light);
+  cursor:pointer;
+  transition:all 0.3s;
+  letter-spacing:0.02em;
+  backdrop-filter:blur(6px);
+}
+.dark .mode-tab{
+  border-color:rgba(100,160,60,0.35);
+  background:rgba(20,40,10,0.3);
+  color:rgba(200,220,160,0.8);
+}
+.mode-tab.active{
+  background:var(--pill-light);
+  color:var(--pill-text-light);
+  border-color:transparent;
+  font-weight:700;
+}
+.dark .mode-tab.active{
+  background:var(--pill-dark);
+  color:#a8d878;
+  border-color:rgba(120,180,70,0.4);
+}
+.mode-tab:hover:not(.active){
+  background:rgba(253,249,240,0.22);
+  border-color:rgba(253,249,240,0.7);
+}
+.dark .mode-tab:hover:not(.active){background:rgba(40,80,20,0.4);}
+
+/* Timer */
+.timer-display{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(6rem,18vw,11rem);
+  font-weight:700;
+  color:var(--text-light);
+  letter-spacing:-0.02em;
+  line-height:1;
+  text-shadow:0 4px 30px rgba(0,0,0,0.4),0 0 80px rgba(0,0,0,0.2);
+  margin-bottom:2.5rem;
+  transition:color 0.5s;
+  user-select:none;
+}
+.dark .timer-display{
+  color:var(--text-dark);
+  text-shadow:0 4px 30px rgba(0,0,0,0.7),0 0 60px rgba(80,160,40,0.15);
+}
+
+/* Current task indicator */
+.current-task-strip{
+  position:absolute;
+  top:calc(50% - 7rem);
+  left:50%;transform:translateX(-50%);
+  font-family:'Caveat',cursive;
+  font-size:1.1rem;
+  color:var(--text-muted-light);
+  letter-spacing:0.05em;
+  white-space:nowrap;
+  transition:color 0.5s;
+}
+.dark .current-task-strip{color:var(--text-muted-dark);}
+
+/* Controls row */
+.controls-row{
+  display:flex;align-items:center;gap:1rem;
+}
+.btn-start{
+  font-family:'Lato',sans-serif;
+  font-size:1rem;font-weight:700;
+  padding:0.7rem 2.8rem;
+  border-radius:40px;
+  border:none;
+  background:var(--btn-start-light);
+  color:var(--btn-start-text-light);
+  cursor:pointer;
+  letter-spacing:0.05em;
+  box-shadow:0 4px 24px rgba(0,0,0,0.25);
+  transition:all 0.25s;
+}
+.dark .btn-start{
+  background:var(--btn-start-dark);
+  color:var(--btn-start-text-dark);
+  box-shadow:0 4px 24px rgba(0,0,0,0.5);
+}
+.btn-start:hover{transform:scale(1.05);box-shadow:0 6px 32px rgba(0,0,0,0.35);}
+.btn-start:active{transform:scale(0.97);}
+.ctrl-icon-btn{
+  background:rgba(253,249,240,0.15);
+  border:2px solid rgba(253,249,240,0.3);
+  border-radius:50%;width:44px;height:44px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:1.1rem;
+  color:var(--text-light);
+  backdrop-filter:blur(8px);
+  transition:all 0.25s;
+}
+.dark .ctrl-icon-btn{
+  background:rgba(20,40,10,0.4);
+  border-color:rgba(100,160,60,0.3);
+  color:rgba(200,220,160,0.85);
+}
+.ctrl-icon-btn:hover{
+  background:rgba(253,249,240,0.3);
+  transform:scale(1.08);
+}
+.dark .ctrl-icon-btn:hover{background:rgba(40,80,20,0.55);}
+
+/* Session dots */
+.session-dots{
+  display:flex;gap:6px;margin-top:1.5rem;
+  align-items:center;
+}
+.sdot{
+  width:10px;height:10px;border-radius:50%;
+  border:1.5px solid rgba(253,249,240,0.5);
+  transition:all 0.4s;
+}
+.dark .sdot{border-color:rgba(150,200,80,0.4);}
+.sdot.lit{background:rgba(253,249,240,0.9);border-color:rgba(253,249,240,0.9);}
+.dark .sdot.lit{background:#9de060;border-color:#9de060;}
+
+/* Bottom-left: Spotify card */
+.spotify-card{
+  position:fixed;bottom:1.5rem;left:1.5rem;
+  background:rgba(253,249,240,0.14);
+  border:1px solid rgba(253,249,240,0.22);
+  border-radius:16px;
+  backdrop-filter:blur(14px);
+  padding:0.75rem;
+  width:320px;
+  transition:all 0.5s;
+  z-index:20;
+}
+.dark .spotify-card{
+  background:rgba(15,30,8,0.75);
+  border-color:rgba(80,140,40,0.25);
+}
+.dark .spotify-card{
+  background:rgba(15,30,8,0.75);
+  border-color:rgba(80,140,40,0.25);
+}
+.sp-track-row{display:flex;align-items:center;gap:0.65rem;}
+.sp-art{
+  width:44px;height:44px;border-radius:8px;
+  background:linear-gradient(135deg,#3d7a3d,#1a4a1a);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.4rem;flex-shrink:0;
+}
+.sp-info{flex:1;overflow:hidden;}
+.sp-title{
+  font-size:0.78rem;font-weight:700;
+  color:var(--text-light);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.dark .sp-title{color:var(--text-dark);}
+.sp-artist{
+  font-size:0.7rem;color:var(--text-muted-light);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.dark .sp-artist{color:var(--text-muted-dark);}
+.sp-logo{font-size:0.75rem;color:#1DB954;font-weight:700;letter-spacing:0.05em;}
+.sp-progress{height:2.5px;background:rgba(253,249,240,0.2);border-radius:3px;cursor:pointer;position:relative;}
+.dark .sp-progress{background:rgba(100,160,60,0.2);}
+.sp-fill{height:2.5px;background:rgba(253,249,240,0.85);border-radius:3px;transition:width .8s linear;}
+.dark .sp-fill{background:#9de060;}
+.sp-controls{display:flex;align-items:center;justify-content:space-between;}
+.sp-times{display:flex;justify-content:space-between;font-size:0.62rem;color:var(--text-muted-light);}
+.dark .sp-times{color:var(--text-muted-dark);}
+.sp-btn{
+  background:none;border:none;cursor:pointer;
+  color:var(--text-light);font-size:0.85rem;
+  opacity:0.8;transition:all 0.2s;padding:2px;
+}
+.dark .sp-btn{color:rgba(180,220,130,0.85);}
+.sp-btn:hover{opacity:1;transform:scale(1.15);}
+.sp-play-btn{
+  background:rgba(253,249,240,0.9);
+  border:none;cursor:pointer;
+  color:#2d4a1a;
+  font-size:0.8rem;
+  width:28px;height:28px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  transition:all 0.2s;
+}
+.dark .sp-play-btn{background:#7ec850;color:#1a3a0a;}
+.sp-play-btn:hover{transform:scale(1.1);}
+.open-sp{
+  display:block;
+  font-size:0.68rem;color:var(--text-muted-light);
+  text-decoration:none;text-align:center;
+  transition:color 0.2s;letter-spacing:0.04em;
+}
+.dark .open-sp{color:var(--text-muted-dark);}
+.open-sp:hover{color:var(--text-light);}
+.dark .open-sp:hover{color:var(--text-dark);}
+.sp-toggle{
+  position:fixed;bottom:1.5rem;left:1.5rem;
+  width:34px;height:34px;border-radius:50%;
+  background:rgba(253,249,240,0.18);
+  border:1px solid rgba(253,249,240,0.28);
+  cursor:pointer;display:none;align-items:center;justify-content:center;
+  font-size:1rem;color:var(--text-light);backdrop-filter:blur(8px);
+  z-index:20;transition:all 0.3s;
+}
+.dark .sp-toggle{
+  background:rgba(15,30,8,0.7);
+  border-color:rgba(80,140,40,0.3);
+  color:rgba(180,220,130,0.85);
+}
+
+/* Bottom-right: task peek */
+.task-peek{
+  position:fixed;bottom:1.5rem;right:1.5rem;
+  z-index:20;display:flex;flex-direction:column;align-items:flex-end;gap:0.5rem;
+}
+.task-btn{
+  background:rgba(253,249,240,0.14);
+  border:1px solid rgba(253,249,240,0.22);
+  border-radius:20px;padding:0.4rem 1rem;
+  color:var(--text-light);font-size:0.75rem;
+  cursor:pointer;backdrop-filter:blur(10px);
+  display:flex;align-items:center;gap:0.4rem;
+  transition:all 0.25s;font-family:'Lato',sans-serif;
+}
+.dark .task-btn{
+  background:rgba(15,30,8,0.65);
+  border-color:rgba(80,140,40,0.25);
+  color:rgba(200,230,140,0.85);
+}
+.task-btn:hover{background:rgba(253,249,240,0.25);}
+.dark .task-btn:hover{background:rgba(30,60,15,0.75);}
+
+/* Task drawer */
+.task-drawer{
+  position:fixed;right:0;top:0;bottom:0;
+  width:320px;
+  background:rgba(253,249,240,0.96);
+  border-left:1px solid rgba(74,124,89,0.2);
+  z-index:50;
+  transform:translateX(100%);
+  transition:transform 0.4s cubic-bezier(.4,0,.2,1);
+  display:flex;flex-direction:column;
+  padding:1.5rem;gap:1rem;
+  overflow-y:auto;
+}
+.dark .task-drawer{
+  background:rgba(15,28,10,0.97);
+  border-left-color:rgba(80,140,40,0.2);
+}
+.task-drawer.open{transform:translateX(0);}
+.drawer-title{
+  font-family:'Playfair Display',serif;
+  font-size:1.2rem;color:#2d4a1a;
+  font-weight:700;display:flex;justify-content:space-between;align-items:center;
+}
+.dark .drawer-title{color:#a8d878;}
+.drawer-close{
+  background:none;border:none;cursor:pointer;
+  font-size:1.1rem;color:#6b7c5a;
+  transition:color 0.2s;
+}
+.dark .drawer-close{color:#7a9a5a;}
+.drawer-close:hover{color:#2d4a1a;}
+.task-input-row{display:flex;gap:0.4rem;}
+.task-inp{
+  flex:1;background:#f0eadb;
+  border:1.5px solid #c8b898;border-radius:10px;
+  padding:0.45rem 0.7rem;font-size:0.82rem;
+  color:#3d2e1e;font-family:'Lato',sans-serif;outline:none;
+  transition:border 0.2s;
+}
+.dark .task-inp{
+  background:#1a3010;border-color:#3a6025;
+  color:#c8dfa8;
+}
+.task-inp:focus{border-color:#4a7c59;}
+.dark .task-inp::placeholder{color:#5a7a40;}
+.task-inp::placeholder{color:#a89070;}
+.add-task-btn{
+  background:#4a7c59;color:#fff;
+  border:none;border-radius:10px;
+  padding:0 0.8rem;cursor:pointer;font-size:1rem;
+  transition:background 0.2s;
+}
+.add-task-btn:hover{background:#2d5a3d;}
+.task-list-inner{display:flex;flex-direction:column;gap:0.5rem;overflow-y:auto;}
+.t-item{
+  background:#f8f2e4;border:1.5px solid #d8cdb0;
+  border-radius:12px;padding:0.6rem 0.75rem;
+  transition:all 0.25s;cursor:pointer;
+}
+.dark .t-item{background:#1f3815;border-color:#2d4820;}
+.t-item:hover{border-color:#4a7c59;}
+.dark .t-item:hover{border-color:#5a9040;}
+.t-item.focused-task{border-color:#4a7c59;background:#ecf5ee;}
+.dark .t-item.focused-task{border-color:#7ab85a;background:#1a3a12;}
+.t-top{display:flex;align-items:center;gap:0.5rem;}
+.t-check{
+  width:16px;height:16px;border-radius:50%;
+  border:1.5px solid #a89070;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:0.6rem;flex-shrink:0;transition:all 0.2s;
+}
+.dark .t-check{border-color:#5a7a40;}
+.t-check.chk{background:#4a7c59;border-color:#2d5a3d;color:#fff;}
+.t-name{flex:1;font-size:0.82rem;color:#3d2e1e;transition:all 0.2s;}
+.dark .t-name{color:#c8dfa8;}
+.t-name.x{text-decoration:line-through;color:#a89070;}
+.dark .t-name.x{color:#5a7a40;}
+.t-del{background:none;border:none;cursor:pointer;color:#c4856a;font-size:0.75rem;opacity:0.6;transition:opacity 0.2s;}
+.t-del:hover{opacity:1;}
+.t-focus-btn{
+  font-size:0.68rem;padding:1px 7px;border-radius:8px;
+  border:1px solid #4a7c59;background:none;color:#4a7c59;
+  cursor:pointer;transition:all 0.2s;
+}
+.dark .t-focus-btn{border-color:#7ab85a;color:#7ab85a;}
+.t-focus-btn:hover,.t-focus-btn.on{background:#4a7c59;color:#fff;}
+.dark .t-focus-btn:hover,.dark .t-focus-btn.on{background:#5a9040;color:#fff;}
+.t-meta{display:flex;align-items:center;gap:0.4rem;padding-left:22px;margin-top:0.25rem;}
+.t-pomos{font-size:0.7rem;color:#8a7a60;display:flex;align-items:center;gap:3px;}
+.dark .t-pomos{color:#6a8a4a;}
+.pomo-pip{width:6px;height:6px;border-radius:50%;background:#4a7c59;display:inline-block;}
+.dark .pomo-pip{background:#7ab85a;}
+.drawer-stats{
+  display:flex;justify-content:space-around;
+  border-top:1px solid #d8cdb0;padding-top:0.75rem;margin-top:auto;
+}
+.dark .drawer-stats{border-color:#2d4820;}
+.ds-item{text-align:center;}
+.ds-num{font-family:'Playfair Display',serif;font-size:1.4rem;color:#2d4a1a;font-weight:700;}
+.dark .ds-num{color:#9de060;}
+.ds-label{font-size:0.67rem;color:#8a7a60;letter-spacing:0.05em;}
+.dark .ds-label{color:#6a8a4a;}
+
+/* Fireflies */
+.ff{
+  position:fixed;
+  width:5px;height:5px;
+  border-radius:50%;
+  background:#f0c040;
+  box-shadow:0 0 8px 3px rgba(240,192,64,0.8);
+  pointer-events:none;
+  z-index:5;
+}
+@keyframes ff-anim{
+  0%{opacity:0}
+  20%{opacity:1}
+  50%{opacity:0.3}
+  80%{opacity:1}
+  100%{opacity:0}
+}
+
+/* Notification */
+.notif-overlay{
+  position:fixed;inset:0;z-index:100;
+  display:flex;align-items:center;justify-content:center;
+  pointer-events:none;
+}
+.notif-box{
+  background:rgba(253,249,240,0.97);
+  border:2px solid #4a7c59;
+  border-radius:20px;padding:2rem 2.5rem;
+  text-align:center;
+  transform:translateY(-30px) scale(0.9);opacity:0;
+  transition:all 0.4s cubic-bezier(.34,1.56,.64,1);
+  pointer-events:auto;box-shadow:0 8px 40px rgba(0,0,0,0.3);
+}
+.dark .notif-box{
+  background:rgba(15,30,8,0.97);
+  border-color:#7ab85a;
+}
+.notif-box.show{transform:translateY(0) scale(1);opacity:1;}
+.notif-icon{font-size:3rem;margin-bottom:0.5rem;}
+.notif-title{
+  font-family:'Playfair Display',serif;
+  font-size:1.3rem;color:#2d4a1a;font-weight:700;margin-bottom:0.3rem;
+}
+.dark .notif-title{color:#9de060;}
+.notif-sub{font-size:0.82rem;color:#6b5a4a;font-style:italic;font-family:'Playfair Display',serif;}
+.dark .notif-sub{color:#8a9a6a;}
+.notif-close{
+  margin-top:1rem;background:#4a7c59;color:#fff;
+  border:none;border-radius:10px;padding:0.45rem 1.5rem;
+  cursor:pointer;font-family:'Lato',sans-serif;font-size:0.82rem;
+  transition:background 0.2s;
+}
+.notif-close:hover{background:#2d5a3d;}
+
+/* Animations */
+@keyframes sway{0%,100%{transform:rotate(-1deg)}50%{transform:rotate(1.5deg)}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+
+/* Volume */
+.vol-row{display:flex;align-items:center;gap:0.4rem;}
+.vol-sl{flex:1;accent-color:rgba(253,249,240,0.7);height:3px;cursor:pointer;}
+.dark .vol-sl{accent-color:#9de060;}
+.vol-icon{font-size:0.7rem;opacity:0.7;color:var(--text-light);}
+.dark .vol-icon{color:rgba(180,220,130,0.7);}
+</style>
+</head>
+<body>
+
+<!-- Background -->
+<div class="bg-canvas"></div>
+
+<!-- Forest SVG Scene -->
+<svg class="forest-scene" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <!-- Sky gradient -->
+  <defs>
+    <linearGradient id="sky-l" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#d4c9a8"/>
+      <stop offset="40%" stop-color="#b8a882"/>
+      <stop offset="70%" stop-color="#8fa876"/>
+      <stop offset="100%" stop-color="#4a7c59"/>
+    </linearGradient>
+    <linearGradient id="sky-d" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0a1408"/>
+      <stop offset="40%" stop-color="#0f1e0a"/>
+      <stop offset="70%" stop-color="#152810"/>
+      <stop offset="100%" stop-color="#1a3010"/>
+    </linearGradient>
+    <linearGradient id="ground-g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3d5c2a"/>
+      <stop offset="100%" stop-color="#1a2e0e"/>
+    </linearGradient>
+    <linearGradient id="mid-g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#5a7a45" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#2d4a1a" stop-opacity="1"/>
+    </linearGradient>
+    <radialGradient id="moon-g" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff8dc" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#d4c060" stop-opacity="0.3"/>
+    </radialGradient>
+    <radialGradient id="sun-g" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#f0d080" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#d4a017" stop-opacity="0.2"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Sky fill -->
+  <rect class="sky-rect" width="1440" height="900" fill="url(#sky-l)"/>
+
+  <!-- Sun/Moon -->
+  <circle id="sun-circle" cx="720" cy="160" r="55" fill="url(#sun-g)" opacity="0.85"/>
+  <circle id="sun-glow" cx="720" cy="160" r="90" fill="#d4a017" opacity="0.08"/>
+  <circle id="moon-circle" cx="720" cy="160" r="40" fill="url(#moon-g)" opacity="0" style="display:none"/>
+
+  <!-- Stars (hidden in light) -->
+  <g id="stars" opacity="0">
+    <text x="200" y="80" font-size="12" fill="#fff8dc" opacity="0.8" font-family="serif">✦</text>
+    <text x="350" y="55" font-size="8" fill="#fff8dc" opacity="0.6" font-family="serif">✦</text>
+    <text x="500" y="90" font-size="6" fill="#fff8dc" opacity="0.5" font-family="serif">✦</text>
+    <text x="900" y="65" font-size="10" fill="#fff8dc" opacity="0.7" font-family="serif">✦</text>
+    <text x="1100" y="50" font-size="7" fill="#fff8dc" opacity="0.55" font-family="serif">✦</text>
+    <text x="1280" y="85" font-size="9" fill="#fff8dc" opacity="0.6" font-family="serif">✦</text>
+    <text x="420" y="40" font-size="5" fill="#fff8dc" opacity="0.4" font-family="serif">✦</text>
+    <text x="650" y="45" font-size="6" fill="#fff8dc" opacity="0.45" font-family="serif">✦</text>
+    <text x="800" y="30" font-size="8" fill="#fff8dc" opacity="0.5" font-family="serif">✦</text>
+    <text x="1000" y="75" font-size="5" fill="#fff8dc" opacity="0.4" font-family="serif">✦</text>
+    <text x="150" y="110" font-size="6" fill="#fff8dc" opacity="0.35" font-family="serif">✦</text>
+    <text x="1340" y="120" font-size="7" fill="#fff8dc" opacity="0.4" font-family="serif">✦</text>
+  </g>
+
+  <!-- Far mountains/hills -->
+  <ellipse cx="300" cy="420" rx="350" ry="180" fill="#7a9e6a" opacity="0.45"/>
+  <ellipse cx="900" cy="400" rx="420" ry="200" fill="#6a8e5a" opacity="0.4"/>
+  <ellipse cx="1300" cy="440" rx="300" ry="160" fill="#7aa870" opacity="0.38"/>
+
+  <!-- Mid hills -->
+  <ellipse cx="100" cy="560" rx="280" ry="160" fill="#4a6c3a" opacity="0.7"/>
+  <ellipse cx="700" cy="530" rx="500" ry="200" fill="#3d5c2a" opacity="0.65"/>
+  <ellipse cx="1350" cy="570" rx="300" ry="160" fill="#4a6c3a" opacity="0.7"/>
+
+  <!-- Ground -->
+  <rect y="700" width="1440" height="200" fill="url(#ground-g)" opacity="0.95"/>
+  <ellipse cx="720" cy="700" rx="900" ry="60" fill="#3d5c2a" opacity="0.6"/>
+
+  <!-- Background trees left cluster -->
+  <g opacity="0.6">
+    <polygon points="30,680 80,440 130,680" fill="#2d4a1a"/>
+    <polygon points="70,680 125,400 180,680" fill="#3a5c22"/>
+    <polygon points="10,680 60,490 110,680" fill="#2a4418"/>
+    <rect x="92" y="640" width="18" height="45" fill="#4a2e0a" rx="2"/>
+    <polygon points="100,680 155,430 210,680" fill="#2d4a1a"/>
+    <polygon points="130,680 185,450 240,680" fill="#3a5c22"/>
+    <rect x="162" y="640" width="16" height="45" fill="#4a2e0a" rx="2"/>
+  </g>
+
+  <!-- Background trees right cluster -->
+  <g opacity="0.6">
+    <polygon points="1210,680 1260,440 1310,680" fill="#2d4a1a"/>
+    <polygon points="1250,680 1305,400 1360,680" fill="#3a5c22"/>
+    <polygon points="1300,680 1355,450 1410,680" fill="#2d4a1a"/>
+    <polygon points="1340,680 1395,430 1440,680" fill="#2a4418"/>
+    <rect x="1277" y="640" width="18" height="45" fill="#4a2e0a" rx="2"/>
+    <rect x="1327" y="640" width="16" height="45" fill="#4a2e0a" rx="2"/>
+  </g>
+
+  <!-- Large foreground trees left -->
+  <g>
+    <rect x="58" y="550" width="28" height="180" fill="#5c3a12" rx="4"/>
+    <polygon points="0,600 72,300 144,600" fill="#2d5a1a" opacity="0.95"/>
+    <polygon points="15,650 72,380 129,650" fill="#3d6a22"/>
+    <polygon points="25,700 72,460 119,700" fill="#4a7c2a" opacity="0.9"/>
+    <!-- Moss on tree trunk -->
+    <ellipse cx="58" cy="580" rx="16" ry="8" fill="#5a8a3c" opacity="0.5" transform="rotate(-5,58,580)"/>
+    <ellipse cx="78" cy="600" rx="12" ry="6" fill="#4a7c2a" opacity="0.4" transform="rotate(8,78,600)"/>
+  </g>
+  <g>
+    <rect x="148" y="600" width="22" height="140" fill="#5c3a12" rx="3"/>
+    <polygon points="100,640 159,380 218,640" fill="#345c1e" opacity="0.9"/>
+    <polygon points="110,690 159,450 208,690" fill="#3d6a22"/>
+  </g>
+
+  <!-- Large foreground trees right -->
+  <g>
+    <rect x="1354" y="550" width="28" height="180" fill="#5c3a12" rx="4"/>
+    <polygon points="1296,600 1368,300 1440,600" fill="#2d5a1a" opacity="0.95"/>
+    <polygon points="1311,650 1368,380 1425,650" fill="#3d6a22"/>
+    <polygon points="1321,700 1368,460 1415,700" fill="#4a7c2a" opacity="0.9"/>
+    <ellipse cx="1368" cy="580" rx="14" ry="7" fill="#5a8a3c" opacity="0.45" transform="rotate(5,1368,580)"/>
+  </g>
+  <g>
+    <rect x="1270" y="600" width="22" height="140" fill="#5c3a12" rx="3"/>
+    <polygon points="1222,640 1281,380 1340,640" fill="#345c1e" opacity="0.9"/>
+    <polygon points="1232,690 1281,450 1330,690" fill="#3d6a22"/>
+  </g>
+
+  <!-- Vines on left edge -->
+  <g stroke="#4a7c3a" fill="none" stroke-linecap="round" opacity="0.7">
+    <path d="M0 100 Q15 150 5 220 Q-5 280 20 340 Q35 390 10 450" stroke-width="2"/>
+    <path d="M5 200 Q25 190 30 175" stroke-width="1.2"/>
+    <ellipse cx="30" cy="173" rx="10" ry="6" fill="#5a8a3c" opacity="0.6" transform="rotate(-25,30,173)"/>
+    <path d="M10 310 Q30 295 35 280" stroke-width="1.2"/>
+    <ellipse cx="36" cy="278" rx="9" ry="5" fill="#4a7c2a" opacity="0.55" transform="rotate(15,36,278)"/>
+    <path d="M15 390 Q-5 380 -10 365" stroke-width="1"/>
+    <ellipse cx="-10" cy="363" rx="8" ry="4" fill="#5a8a3c" opacity="0.5" transform="rotate(-10,-10,363)"/>
+  </g>
+
+  <!-- Vines on right edge -->
+  <g stroke="#4a7c3a" fill="none" stroke-linecap="round" opacity="0.7">
+    <path d="M1440 80 Q1425 140 1435 210 Q1445 270 1420 330 Q1405 385 1430 445" stroke-width="2"/>
+    <path d="M1435 190 Q1415 178 1410 163" stroke-width="1.2"/>
+    <ellipse cx="1409" cy="161" rx="10" ry="6" fill="#5a8a3c" opacity="0.6" transform="rotate(20,1409,161)"/>
+    <path d="M1422 305 Q1402 290 1397 275" stroke-width="1.2"/>
+    <ellipse cx="1396" cy="273" rx="9" ry="5" fill="#4a7c2a" opacity="0.55" transform="rotate(-15,1396,273)"/>
+  </g>
+
+  <!-- Foreground wildflowers -->
+  <g opacity="0.75">
+    <!-- Left flowers -->
+    <line x1="180" y1="760" x2="180" y2="710" stroke="#4a7c3a" stroke-width="1.5" stroke-linecap="round"/>
+    <circle cx="180" cy="707" r="5" fill="#c4856a"/>
+    <circle cx="176" cy="703" r="3.5" fill="#c4856a" opacity="0.8"/>
+    <circle cx="184" cy="703" r="3.5" fill="#c4856a" opacity="0.8"/>
+    <circle cx="180" cy="700" r="3.5" fill="#c4856a" opacity="0.8"/>
+    <circle cx="180" cy="707" r="2.5" fill="#d4a017"/>
+
+    <line x1="200" y1="760" x2="200" y2="720" stroke="#4a7c3a" stroke-width="1.2" stroke-linecap="round"/>
+    <circle cx="200" cy="718" r="4" fill="#8fb87a"/>
+    <circle cx="196" cy="715" r="3" fill="#8fb87a" opacity="0.7"/>
+    <circle cx="204" cy="715" r="3" fill="#8fb87a" opacity="0.7"/>
+    <circle cx="200" cy="718" r="2" fill="#c8960a"/>
+
+    <line x1="160" y1="760" x2="160" y2="728" stroke="#3d5c22" stroke-width="1" stroke-linecap="round"/>
+    <circle cx="160" cy="726" r="3.5" fill="#c4856a" opacity="0.6"/>
+
+    <!-- Mushrooms left -->
+    <ellipse cx="230" cy="755" rx="14" ry="6" fill="#4a2e0a" opacity="0.5"/>
+    <path d="M220 755 Q219 740 230 737 Q241 734 240 755" fill="#c4856a" opacity="0.75" stroke="none"/>
+    <circle cx="225" cy="743" r="2" fill="white" opacity="0.7"/>
+    <circle cx="232" cy="740" r="1.5" fill="white" opacity="0.7"/>
+    <circle cx="237" cy="745" r="1.5" fill="white" opacity="0.6"/>
+
+    <ellipse cx="248" cy="757" rx="9" ry="4" fill="#4a2e0a" opacity="0.4"/>
+    <path d="M241 757 Q240 747 248 745 Q256 743 255 757" fill="#d4a017" opacity="0.6" stroke="none"/>
+    <circle cx="245" cy="749" r="1.2" fill="white" opacity="0.65"/>
+    <circle cx="250" cy="748" r="1" fill="white" opacity="0.6"/>
+
+    <!-- Right flowers -->
+    <line x1="1260" y1="760" x2="1260" y2="712" stroke="#4a7c3a" stroke-width="1.5" stroke-linecap="round"/>
+    <circle cx="1260" cy="709" r="5" fill="#c4856a"/>
+    <circle cx="1256" cy="705" r="3.5" fill="#c4856a" opacity="0.8"/>
+    <circle cx="1264" cy="705" r="3.5" fill="#c4856a" opacity="0.8"/>
+    <circle cx="1260" cy="702" r="3.5" fill="#c4856a" opacity="0.8"/>
+    <circle cx="1260" cy="709" r="2.5" fill="#d4a017"/>
+
+    <line x1="1240" y1="760" x2="1240" y2="722" stroke="#4a7c3a" stroke-width="1.2" stroke-linecap="round"/>
+    <circle cx="1240" cy="720" r="4" fill="#8fb87a"/>
+    <circle cx="1236" cy="717" r="3" fill="#8fb87a" opacity="0.7"/>
+    <circle cx="1244" cy="717" r="3" fill="#8fb87a" opacity="0.7"/>
+    <circle cx="1240" cy="720" r="2" fill="#c8960a"/>
+
+    <!-- Mushrooms right -->
+    <ellipse cx="1210" cy="755" rx="14" ry="6" fill="#4a2e0a" opacity="0.5"/>
+    <path d="M1200 755 Q1199 740 1210 737 Q1221 734 1220 755" fill="#c4856a" opacity="0.75" stroke="none"/>
+    <circle cx="1205" cy="743" r="2" fill="white" opacity="0.7"/>
+    <circle cx="1212" cy="740" r="1.5" fill="white" opacity="0.7"/>
+    <circle cx="1217" cy="745" r="1.5" fill="white" opacity="0.6"/>
+  </g>
+
+  <!-- Ground foliage -->
+  <g opacity="0.5">
+    <ellipse cx="100" cy="780" rx="80" ry="30" fill="#3d5c2a"/>
+    <ellipse cx="1340" cy="780" rx="80" ry="30" fill="#3d5c2a"/>
+    <ellipse cx="400" cy="820" rx="120" ry="25" fill="#2d4a1a" opacity="0.6"/>
+    <ellipse cx="1050" cy="820" rx="110" ry="25" fill="#2d4a1a" opacity="0.6"/>
+  </g>
+</svg>
+
+<div class="overlay"></div>
+
+<!-- Fireflies (JS generated) -->
+
+
+<!-- Top right controls -->
+<div class="top-right">
+  <div class="sessions-badge">🍄 <span id="today-count">0</span> sessions</div>
+  <button class="icon-btn" onclick="toggleTheme()" id="theme-btn" title="Toggle dark/light mode" aria-label="Toggle dark mode">🌙</button>
+  <button class="icon-btn" onclick="toggleSpotify()" title="Toggle music player" aria-label="Toggle music player" style="font-size:0.85rem">♪</button>
+</div>
+
+<!-- App -->
+<div class="app">
+  <!-- Current task strip -->
+  <div class="current-task-strip" id="task-strip">🎯 no task selected</div>
+
+  <!-- Mode tabs -->
+  <div class="mode-tabs" role="tablist">
+    <button class="mode-tab active" onclick="setMode(0)" role="tab">pomodoro</button>
+    <button class="mode-tab" onclick="setMode(1)" role="tab">short break</button>
+    <button class="mode-tab" onclick="setMode(2)" role="tab">long break</button>
+  </div>
+
+  <!-- Timer -->
+  <div class="timer-display" id="timer-disp">25:00</div>
+
+  <!-- Controls -->
+  <div class="controls-row">
+    <button class="ctrl-icon-btn" onclick="resetTimer()" title="Reset" aria-label="Reset timer">↺</button>
+    <button class="btn-start" id="btn-main" onclick="mainAction()">start</button>
+    <button class="ctrl-icon-btn" onclick="stopTimer()" title="Stop" aria-label="Stop timer">⏹</button>
+  </div>
+
+  <!-- Session dots -->
+  <div class="session-dots">
+    <div class="sdot" id="sd0"></div>
+    <div class="sdot" id="sd1"></div>
+    <div class="sdot" id="sd2"></div>
+    <div class="sdot" id="sd3"></div>
+  </div>
+</div>
+
+<!-- Spotify card -->
+<div class="spotify-card" id="spotify-card">
+  <iframe
+    id="spotify-iframe"
+    src="https://open.spotify.com/embed/album/0oTskpBa4N3cyrd5mmVgMS?si=4mHSDtMOSuam1kQO0HZjBA"
+    width="100%"
+    height="170"
+    frameborder="0"
+    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+    loading="lazy"
+    style="border-radius:12px;">
+  </iframe>
+  <a href="https://open.spotify.com/embed/album/0oTskpBa4N3cyrd5mmVgMS?si=4mHSDtMOSuam1kQO0HZjBA" id="spotify-open-link" target="_blank" class="open-sp" style="margin-top:4px">
+    open in spotify ↗
+  </a>
+</div>
+
+<!-- Task bottom-right -->
+<div class="task-peek">
+  <button class="task-btn" onclick="openDrawer()" aria-label="Open tasks">
+    📜 tasks &amp; focus
+  </button>
+</div>
+
+<!-- Task drawer -->
+<div class="task-drawer" id="task-drawer" aria-label="Task management">
+  <div class="drawer-title">
+    <span style="font-style:italic">✦ My Tasks</span>
+    <button class="drawer-close" onclick="closeDrawer()" aria-label="Close tasks">✕</button>
+  </div>
+  <div class="task-input-row">
+    <input class="task-inp" id="task-inp" placeholder="Plant a new task..." maxlength="60"
+      onkeydown="if(event.key==='Enter')addTask()" aria-label="New task">
+    <button class="add-task-btn" onclick="addTask()" aria-label="Add task">＋</button>
+  </div>
+  <div class="task-list-inner" id="task-list"></div>
+  <div class="drawer-stats">
+    <div class="ds-item"><div class="ds-num" id="ds-total">0</div><div class="ds-label">POMODOROS</div></div>
+    <div class="ds-item"><div class="ds-num" id="ds-done">0</div><div class="ds-label">DONE</div></div>
+    <div class="ds-item"><div class="ds-num" id="ds-active">0</div><div class="ds-label">ACTIVE</div></div>
+  </div>
+</div>
+
+<!-- Notification -->
+<div class="notif-overlay">
+  <div class="notif-box" id="notif">
+    <div class="notif-icon" id="n-icon">🍄</div>
+    <div class="notif-title" id="n-title">Pomodoro Complete!</div>
+    <div class="notif-sub" id="n-sub">Time for a gentle rest, dear.</div>
+    <button class="notif-close" onclick="closeNotif()">close ✿</button>
+  </div>
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────
+const MODES=[
+  {label:'pomodoro',secs:25*60},
+  {label:'short break',secs:5*60},
+  {label:'long break',secs:10*60}
+];
+let mode=0,remaining=MODES[0].secs,running=false,ticker=null,todayCount=0;
+let tasks=[],focusId=null;
+let dark=false;
+let spPlaying=false,spElapsed=72,spTotal=204,spIdx=0,spTick=null;
+const TRACKS=[
+  {title:'Cottagecore Study Mix',artist:'Forest Ambient Sounds',icon:'🌲',total:204},
+  {title:'Enchanted Reading Nook',artist:'Cozy Ambient Collective',icon:'🍄',total:243},
+  {title:'Rainy Day Hearth',artist:'Nature Sounds Studio',icon:'☔',total:198},
+  {title:'Whispering Willows',artist:'Woodland Vibes',icon:'🌿',total:187},
+];
+
+// ── Persist ───────────────────────────────────────────────────
+function save(){
+  try{
+    localStorage.setItem('mh2_tasks',JSON.stringify(tasks));
+    localStorage.setItem('mh2_today',todayCount);
+    localStorage.setItem('mh2_mode',mode);
+    localStorage.setItem('mh2_dark',dark);
+  }catch(e){}
+}
+function loadData(){
+  try{
+    const t=localStorage.getItem('mh2_tasks');if(t)tasks=JSON.parse(t);
+    const d=localStorage.getItem('mh2_today');if(d)todayCount=parseInt(d)||0;
+    const m=localStorage.getItem('mh2_mode');if(m)setMode(parseInt(m)||0,true);
+    const dk=localStorage.getItem('mh2_dark');if(dk==='true'){dark=true;applyTheme();}
+  }catch(e){}
+}
+
+// ── Theme ─────────────────────────────────────────────────────
+function toggleTheme(){dark=!dark;applyTheme();save();}
+function applyTheme(){
+  document.body.classList.toggle('dark',dark);
+  document.getElementById('theme-btn').textContent=dark?'☀️':'🌙';
+  const stars=document.getElementById('stars');
+  const moon=document.getElementById('moon-circle');
+  const sun=document.getElementById('sun-circle');
+  const glow=document.getElementById('sun-glow');
+  if(dark){
+    stars.style.opacity='0.9';
+    moon.style.display='block';moon.style.opacity='0.9';
+    sun.style.opacity='0';glow.style.opacity='0';
+  }else{
+    stars.style.opacity='0';
+    moon.style.display='none';
+    sun.style.opacity='0.85';glow.style.opacity='0.08';
+  }
+}
+
+// ── Timer ─────────────────────────────────────────────────────
+function fmt(s){return`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`}
+function updDisp(){document.getElementById('timer-disp').textContent=fmt(remaining);}
+function setMode(m,silent){
+  mode=m;
+  document.querySelectorAll('.mode-tab').forEach((t,i)=>{
+    t.classList.toggle('active',i===m);
+    t.setAttribute('aria-selected',i===m);
+  });
+  remaining=MODES[m].secs;
+  if(!silent){clearInterval(ticker);running=false;document.getElementById('btn-main').textContent='start';}
+  updDisp();save();
+}
+function mainAction(){
+  if(!running){
+    running=true;
+    document.getElementById('btn-main').textContent='pause';
+    ticker=setInterval(()=>{
+      remaining--;updDisp();
+      if(remaining<=0){clearInterval(ticker);running=false;document.getElementById('btn-main').textContent='start';onDone();}
+    },1000);
+  }else{
+    clearInterval(ticker);running=false;
+    document.getElementById('btn-main').textContent='start';
+  }
+}
+function stopTimer(){
+  clearInterval(ticker);running=false;remaining=MODES[mode].secs;
+  document.getElementById('btn-main').textContent='start';updDisp();
+}
+function resetTimer(){stopTimer();}
+function onDone(){
+  if(mode===0){
+    todayCount++;
+    if(focusId!=null){const t=tasks.find(t=>t.id===focusId);if(t)t.pomos=(t.pomos||0)+1;}
+    document.getElementById('today-count').textContent=todayCount;
+    const di=(todayCount-1)%4;
+    document.getElementById('sd'+di).classList.add('lit');
+    if(todayCount%4===0)setTimeout(()=>document.querySelectorAll('.sdot').forEach(d=>d.classList.remove('lit')),2200);
+    renderTasks();save();updStats();
+    showNotif('🍄','Pomodoro complete!','Well done, dear forest dweller~ time for rest.');
+  }else{
+    showNotif('🌿','Break over!','Back to the enchanted study nook.');
+  }
+  playChime();
+}
+
+// ── Chime ─────────────────────────────────────────────────────
+function playChime(){
+  try{
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    const notes=[523,659,784,880,784,659,523];
+    notes.forEach((freq,i)=>{
+      const osc=ctx.createOscillator();
+      const gain=ctx.createGain();
+      const start=ctx.currentTime+(i*0.28);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type='triangle';
+      osc.frequency.setValueAtTime(freq,start);
+      gain.gain.setValueAtTime(0,start);
+      gain.gain.linearRampToValueAtTime(0.25,start+0.08);
+      gain.gain.linearRampToValueAtTime(0.18,start+0.2);
+      gain.gain.linearRampToValueAtTime(0,start+0.26);
+      osc.start(start);
+      osc.stop(start+0.3);
+    });
+  }catch(e){console.log('audio error',e);}
+}
+
+// ── Notif ─────────────────────────────────────────────────────
+function showNotif(icon,title,sub){
+  document.getElementById('n-icon').textContent=icon;
+  document.getElementById('n-title').textContent=title;
+  document.getElementById('n-sub').textContent=sub;
+  document.getElementById('notif').classList.add('show');
+  setTimeout(closeNotif,6000);
+}
+function closeNotif(){document.getElementById('notif').classList.remove('show');}
+
+// ── Tasks ─────────────────────────────────────────────────────
+function addTask(){
+  const inp=document.getElementById('task-inp');
+  const v=inp.value.trim();if(!v)return;
+  tasks.push({id:Date.now(),name:v,done:false,pomos:0});
+  inp.value='';renderTasks();save();updStats();
+}
+function renderTasks(){
+  const el=document.getElementById('task-list');
+  if(tasks.length===0){
+    el.innerHTML='<div style="text-align:center;padding:1.5rem 0;font-style:italic;font-family:Playfair Display,serif;font-size:0.82rem;color:#8a7a60">Your task garden is empty~<br>Plant something new ✿</div>';
+    return;
+  }
+  el.innerHTML='';
+  tasks.forEach(t=>{
+    const d=document.createElement('div');
+    d.className='t-item'+(t.id===focusId?' focused-task':'');
+    const pips=Array.from({length:Math.min(t.pomos||0,8)},()=>'<span class="pomo-pip"></span>').join('');
+    d.innerHTML=`
+      <div class="t-top">
+        <div class="t-check${t.done?' chk':''}" onclick="toggleDone(${t.id})" role="checkbox" aria-checked="${t.done}" tabindex="0">${t.done?'✓':''}</div>
+        <span class="t-name${t.done?' x':''}">${esc(t.name)}</span>
+        <button class="t-del" onclick="delTask(${t.id})" aria-label="Delete">✕</button>
+      </div>
+      <div class="t-meta">
+        <span class="t-pomos">🍅 ${t.pomos||0} ${pips}</span>
+        ${!t.done?`<button class="t-focus-btn${t.id===focusId?' on':''}" onclick="setFocus(${t.id})">${t.id===focusId?'✦ focused':'focus'}</button>`:''}
+      </div>`;
+    el.appendChild(d);
+  });
+  const ft=tasks.find(t=>t.id===focusId);
+  document.getElementById('task-strip').textContent=ft?'🎯 '+ft.name:'🎯 no task selected';
+}
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+function toggleDone(id){const t=tasks.find(t=>t.id===id);if(!t)return;t.done=!t.done;if(t.done&&focusId===id)focusId=null;renderTasks();save();updStats();}
+function delTask(id){tasks=tasks.filter(t=>t.id!==id);if(focusId===id)focusId=null;renderTasks();save();updStats();}
+function setFocus(id){focusId=id===focusId?null:id;renderTasks();}
+function updStats(){
+  const total=tasks.reduce((a,t)=>a+(t.pomos||0),0);
+  document.getElementById('ds-total').textContent=total;
+  document.getElementById('ds-done').textContent=tasks.filter(t=>t.done).length;
+  document.getElementById('ds-active').textContent=tasks.filter(t=>!t.done).length;
+}
+function openDrawer(){document.getElementById('task-drawer').classList.add('open');}
+function closeDrawer(){document.getElementById('task-drawer').classList.remove('open');}
+
+// ── Spotify sim ───────────────────────────────────────────────
+function loadTrack(){
+  const tr=TRACKS[spIdx];
+  document.getElementById('sp-art').textContent=tr.icon;
+  document.getElementById('sp-title').textContent=tr.title;
+  document.getElementById('sp-artist').textContent=tr.artist;
+  spTotal=tr.total;spElapsed=0;
+  document.getElementById('sp-tot').textContent=fmt(spTotal);
+  document.getElementById('sp-el').textContent=fmt(0);
+  document.getElementById('sp-fill').style.width='0%';
+}
+function togglePlay(){
+  spPlaying=!spPlaying;
+  document.getElementById('sp-play').textContent=spPlaying?'⏸':'▶';
+  if(spPlaying){
+    spTick=setInterval(()=>{
+      spElapsed=Math.min(spElapsed+1,spTotal);
+      document.getElementById('sp-fill').style.width=(spElapsed/spTotal*100)+'%';
+      document.getElementById('sp-el').textContent=fmt(spElapsed);
+      if(spElapsed>=spTotal)nextTrack();
+    },1000);
+  }else{clearInterval(spTick);}
+}
+function prevTrack(){clearInterval(spTick);spPlaying=false;document.getElementById('sp-play').textContent='▶';spIdx=(spIdx-1+TRACKS.length)%TRACKS.length;loadTrack();}
+function nextTrack(){clearInterval(spTick);spPlaying=false;document.getElementById('sp-play').textContent='▶';spIdx=(spIdx+1)%TRACKS.length;loadTrack();}
+function seekTrack(e){
+  const bar=document.getElementById('sp-prog-bar');
+  const r=bar.getBoundingClientRect();
+  spElapsed=Math.round(Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*spTotal);
+  document.getElementById('sp-fill').style.width=(spElapsed/spTotal*100)+'%';
+  document.getElementById('sp-el').textContent=fmt(spElapsed);
+}
+function toggleSpotify(){
+  const c=document.getElementById('spotify-card');
+  c.style.display=c.style.display==='none'?'flex':'none';
+}
+
+// ── Fireflies ─────────────────────────────────────────────────
+function spawnFireflies(){
+  for(let i=0;i<20;i++){
+    const ff=document.createElement('div');
+    ff.className='ff';
+    ff.style.left=(Math.random()*100)+'vw';
+    ff.style.top=(10+Math.random()*75)+'vh';
+    ff.style.animationName='ff-anim';
+    ff.style.animationDuration=(2+Math.random()*3).toFixed(1)+'s';
+    ff.style.animationDelay=(Math.random()*7).toFixed(1)+'s';
+    ff.style.animationIterationCount='infinite';
+    ff.style.animationTimingFunction='ease-in-out';
+    document.body.appendChild(ff);
+    // make them drift slowly
+    setInterval(()=>{
+      ff.style.left=(parseFloat(ff.style.left)+(Math.random()-0.5)*0.3)+'vw';
+      ff.style.top=(parseFloat(ff.style.top)+(Math.random()-0.5)*0.2)+'vh';
+    },800);
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────
+loadData();
+renderTasks();updStats();
+updDisp();
+document.getElementById('today-count').textContent=todayCount;
+document.getElementById('sp-el').textContent=fmt(72);
+document.getElementById('sp-tot').textContent=fmt(204);
+spawnFireflies();
+
+// Close drawer on outside click
+document.addEventListener('click',e=>{
+  const drawer=document.getElementById('task-drawer');
+  if(drawer.classList.contains('open')&&!drawer.contains(e.target)&&!e.target.closest('.task-btn'))
+    closeDrawer();
+});
+</script>
+</body>
+</html>
